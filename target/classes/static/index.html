@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>CRUD de Personas con Imágenes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <h1 class="text-center mb-4">CRUD de Personas con Imágenes</h1>
+
+    <!-- Formulario -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">Agregar o Editar Persona</div>
+        <div class="card-body">
+            <form id="formSubirImagen" enctype="multipart/form-data">
+                <input type="hidden" id="personaId" />
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <input type="text" id="nombre" class="form-control" placeholder="Nombre" required>
+                    </div>
+                    <div class="col-md-6">
+                        <input type="file" id="archivo" class="form-control" accept="image/*">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success" id="btnGuardar">Guardar</button>
+                <button type="submit" class="btn btn-warning" id="btnActualizar" style="display:none;">Actualizar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de Personas -->
+    <div class="card">
+        <div class="card-header bg-dark text-white">Listado de Personas</div>
+        <div class="card-body">
+            <table class="table table-bordered table-striped" id="tablaPersonas">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Foto</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Las filas se agregan dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    const URL_BASE = "http://localhost:8080";
+
+    document.addEventListener("DOMContentLoaded", listarPersonas);
+
+    // Agregar o actualizar persona
+    document.getElementById('formSubirImagen').addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const nombre = document.getElementById('nombre').value;
+        const archivo = document.getElementById('archivo').files[0];
+        const personaId = document.getElementById('personaId').value;
+
+        const formData = new FormData();
+        formData.append('nombre', nombre);
+        formData.append('archivo', archivo);
+
+        if (personaId) {
+            // Actualizar persona
+            fetch(`${URL_BASE}/api/persona/actualizar/${personaId}`, {
+                method: 'PUT',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(() => {
+                alert('Persona actualizada con éxito');
+                listarPersonas();
+                resetFormulario();
+            });
+        } else {
+            // Crear nueva persona
+            fetch(`${URL_BASE}/api/persona/guardar`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(() => {
+                alert('Persona guardada con éxito');
+                listarPersonas();
+                resetFormulario();
+            });
+        }
+    });
+
+    // Listar personas
+    function listarPersonas() {
+        fetch(`${URL_BASE}/api/persona/listar`)
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.querySelector('#tablaPersonas tbody');
+                tbody.innerHTML = "";
+                data.forEach(persona => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${persona.id}</td>
+                        <td>${persona.nombre}</td>
+                        <td><img src="${URL_BASE}/api/persona/images/${persona.foto}" width="100" class="img-thumbnail"/></td>
+                        <td>
+                            <button class="btn btn-info btn-sm" onclick="editarPersona(${persona.id})">Editar</button>
+                            <button class="btn btn-danger btn-sm" onclick="eliminarPersona(${persona.id})">Eliminar</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+    }
+
+    // Eliminar persona
+    function eliminarPersona(id) {
+        if (confirm("¿Estás seguro de eliminar esta persona?")) {
+            fetch(`${URL_BASE}/api/persona/eliminar/${id}`, {
+                method: 'DELETE'
+            })
+            .then(() => {
+                alert("Persona eliminada");
+                listarPersonas();
+            });
+        }
+    }
+
+    // Editar persona
+    function editarPersona(id) {
+        fetch(`${URL_BASE}/api/persona/${id}`)
+            .then(res => res.json())
+            .then(persona => {
+                document.getElementById('personaId').value = persona.id;
+                document.getElementById('nombre').value = persona.nombre;
+
+                // Mostrar el botón de actualizar y ocultar el de guardar
+                document.getElementById('btnGuardar').style.display = 'none';
+                document.getElementById('btnActualizar').style.display = 'inline-block';
+            });
+    }
+
+    // Resetear el formulario
+    function resetFormulario() {
+        document.getElementById('personaId').value = '';
+        document.getElementById('nombre').value = '';
+        document.getElementById('archivo').value = '';
+        
+        // Mostrar el botón de guardar y ocultar el de actualizar
+        document.getElementById('btnGuardar').style.display = 'inline-block';
+        document.getElementById('btnActualizar').style.display = 'none';
+    }
+</script>
+
+</body>
+</html>
+
+
